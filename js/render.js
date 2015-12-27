@@ -91,7 +91,7 @@
             
             sexagon = createPairs(sexagon);
             //arrow = createPairs (arrow);
-            arrow = scaleAndTransform(arrow);
+            
 
             letterM = createPairs(letterM);
             letterL = createPairs(letterL);
@@ -159,8 +159,7 @@
                 ctx.save();
                 ctx.beginPath();
                 ctx.strokeStyle = color || mainColor;
-                ctx.fillStyle = color || mainColor;
-                console.log(points);
+                ctx.fillStyle = color || mainColor;                
 
                 ctx.moveTo(points[0].x, points[0].y);                           
                 
@@ -191,7 +190,7 @@
             function scaleAndTransform(points){
                 for(var i=0,c=points.length;i<c;i+=1){
                     points[i]=scalePoint(points[i]);                 
-                    console.log(points[i]);
+                    
                     points[i]=transformPoint(points[i]);
                 }
                 return points;
@@ -214,17 +213,17 @@
             }
 
             function transformPoint(p){
-                console.log(p);
+                
                 p.x = Math.round(p.x+width/2)+transformX;
                 p.y = Math.round(p.y+height/2)+transformY;
-                console.log(p,"break");
+                
                 if(p.c1x){
                     p.c1x = Math.round(p.c1x+width/2)+transformX;
                     p.c1y = Math.round(p.c1y+height/2)+transformY;
                     p.c2x = Math.round(p.c2x+width/2)+transformX;
                     p.c2y = Math.round(p.c2y+height/2)+transformY;
                 }
-                console.log(p);
+                
                 return p;
             }
 
@@ -317,11 +316,15 @@
             }
 
             function init(){
-                // Set framerate to 30 fps
-                //setInterval(render, 1000/24);
+                
                 scale = document.getElementById("scale").value;
-                render();
-                render();
+                width = document.getElementById("logo").getAttribute("width");
+                height = document.getElementById("logo").getAttribute("height");
+                arrow = scaleAndTransform(arrow);
+
+                // Set framerate to 30 fps
+                setInterval(render, 1000/24);
+                
                 document.getElementById("logo").onmouseover = function(e){
                     //console.log(e);
                     step=1;
