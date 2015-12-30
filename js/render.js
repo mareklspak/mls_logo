@@ -268,21 +268,61 @@
                 return p;
             }
 
-            function animate(pairs, point){
+            function animate(pairs, pointPosition){
                 //get length of shape
-                var sum = 0,part=[];
+                var sum = 0,part=[], points = [[]],shapeIndex=0;
+                
+                //if no point take first point;               
+                pointPosition = pointPosition || 0;                
+
                 for(var i=0,c=pairs.length;i<c;i+=1){
                     var temp = calcDistance(pairs[i][0],pairs[i][1]);
                     sum+=temp;
-                    part.push({"total":sum,"l":temp});
+                    part.push({"total":sum,"l":temp});                    
                 }
-                console.log(part);
+                //console.log(part);
                 //total length is equal to the last element total
                 
                 //calculate how much distance to draw per frame
+                var halfTotal = (part[part.length-1].total/finalStep)/2;
+                var percentile = 0,agregate = 0;
 
                 //split shape up into two halfes of equal length and create points
+                for(var i=pointPosition,c=pairs.length;i<c;i+=1){
+                    if(agregate+part[i].l>halfTotal){
+                        percentile = (halfTotal-agregate)/part[i].l;
+                        var newPoint = {"x":pairs[i][1].x-pairs[i][0].x,"y":pairs[i][1].y-pairs[i][0].y};
+                        newPoint.x*=percentile;
+                        newPoint.y*=percentile;
+                        pairs[i][1].x+=newPoint.x;
+                        pairs[i][1].y+=newPoint.y;
 
+                        points[shapeIndex].push(pairs[i][0]);
+                        points[shapeIndex].push(pairs[i][1]);
+
+
+                        shapeIndex+=1;
+                        points.push([]);
+                        points[shapeIndex].push(pairs[i][1]);
+                    } else {
+                        //if total distance is not reach add the point points and increase agregate size
+                        agregate+=part[i].l
+                        points[shapeIndex].push(pairs[i][0]);
+                    }
+
+                    //if we reached the end of the pairs then go back to the begining
+                    if(i==c-1){
+                        i=0;
+                        c=pointPosition;
+                    }
+                }
+
+                //calculate how much distance to draw per frame
+                var distance = 0
+                distance = part[part.length-1].total/finalStep;
+
+                //find defined point
+                
                 //split points up into new points and create an array of points to draw for each frame
 
                 /*
