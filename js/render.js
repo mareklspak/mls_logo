@@ -4,7 +4,8 @@
             {"x":0.866025403784,"y":-0.5},
             {"x":0,"y":-1},
             {"x":-0.866025403784,"y":-0.5},
-            {"x":-0.866025403784,"y":0.5}
+            {"x":-0.866025403784,"y":0.5},
+            {"x":0,"y":1},
             ];
 
             var arrow = [
@@ -13,7 +14,8 @@
             {"x":-0.866025403784,"y":0.7},
             {"x":-0.866025403784,"y":1},
             {"x":0,"y":1.5},
-            {"x":0.866025403784,"y":1}
+            {"x":0.866025403784,"y":1},
+            {"x":0.866025403784,"y":0.7},
             ];
             /* old coordinates
 
@@ -80,19 +82,27 @@
 
             var speed = 1;
             var scale = 1;
-            var step = 1;
-            var finalStep = 100;
+            var step = 0;
+            var smoothness = 10;
+            var finalStep = 50;
             var width, height;
             
             sexagon = createPairs(sexagon);
             arrow = createPairs (arrow);
             
-
+            
             letterM = createPairs(letterM);
             letterL = createPairs(letterL);
             letterS = createPairs(letterS);
 
-            var mainColor = "rgb(255,255,255)";
+            var aP1 = prepareAnimation(sexagon,"mirror",3);
+            var aP2 = prepareAnimation(arrow,"mirror",4);
+            var aP3 = prepareAnimation(letterM);
+            var aP4 = prepareAnimation(letterL);            
+            var aP5 = prepareAnimation(letterS);
+
+            var handle;
+            var mainColor = "rgba(0,11,90,1)";
          
             var origin = {"x":0,"y":0};
            
@@ -114,12 +124,22 @@
                 ctx.globalCompositeOperation = "source-over";
                 //console.log(sphere);
 
-                draw(sexagon,ctx);
-                draw(arrow, ctx);
+                //draw(sexagon,ctx);
+                animate(aP1[0],step,ctx);
+                animate(aP1[1],step,ctx);
+                //draw(arrow, ctx);
+                animate(aP2[0],step,ctx);
+                animate(aP2[1],step,ctx);
 
-                draw(letterM,ctx);
-                draw(letterL,ctx);
-                draw(letterS,ctx);
+                //draw(letterM,ctx);
+                animate(aP3[0],step,ctx);
+                animate(aP3[1],step,ctx);
+                //draw(letterL,ctx);
+                animate(aP4[0],step,ctx);
+                animate(aP4[1],step,ctx);
+                //draw(letterS,ctx);
+                animate(aP5[0],step,ctx);
+                animate(aP5[1],step,ctx);
 
                 point = transformPoint({"x":0,"y":0.25*scale});
 
@@ -129,6 +149,16 @@
                 ctx.restore();
                 if(finalStep > step){
                     step+=1; //move along animation
+                } else {
+                    clearInterval(handle);
+                    handle = null;
+
+                    ctx.save();
+                    //ctx.clearRect(0, 0, width, height);
+
+                    drawCircle(ctx,point.x,point.y,Math.round(2.*scale),0,5);
+                    drawShape(arrow,ctx);
+
                 }
                 //render by frame instead of interval
                 //http://codetheory.in/controlling-the-frame-rate-with-requestanimationframe/
@@ -139,7 +169,7 @@
                 var res = [],ary,subary,p,
                 reg = /(?=\-)|,/;
                 ary = s.split(/([A-Za-z])/g);
-                console.log(ary);
+                
                 for (var i=0,c=ary.length;i<c;i+=1){
                      
                     if(ary[i]){
@@ -190,7 +220,7 @@
 
             function draw(pairs,ctx){
                 var p1,p2;
-                animate(pairs);
+                
                 for(var i=0,c=pairs.length;i<c;i+=1){
                     p1 = {"x":pairs[i][0].x*scale,"y":pairs[i][0].y*scale};
                     p2 = {"x":pairs[i][1].x*scale,"y":pairs[i][1].y*scale};
@@ -206,6 +236,15 @@
                     p2=transformPoint(p2);
 
                     drawLine(ctx,p1,p2,0);
+                }
+            }
+
+            function animate(animationPoints,frame,ctx){
+                if(frame>animationPoints.length){
+                    frame = animationPoints.length;
+                }
+                for(var i=0;i<frame;i+=1){
+                    draw(createPairs(animationPoints[i]),ctx)
                 }
             }
 
@@ -268,62 +307,97 @@
                 return p;
             }
 
-            function animate(pairs, pointPosition){
+            function prepareAnimation(pairs, mode, pointPosition){
                 //get length of shape
-                var sum = 0,part=[], points = [[]],shapeIndex=0;
+                var sum = 0,part=[], points = [[]],shapeIndex=0,liniarPairs = [],temp;
                 
-                //if no point take first point;               
-                pointPosition = pointPosition || 0;                
+                //if no point or to large take first point;               
+                pointPosition = (pointPosition && pointPosition<pairs.length) ? pointPosition : 0;
+
+                //convert curves to lines
+                for(var i=0,c=pairs.length;i<c;i+=1){
+                    if(pairs[i][1].c1x){
+                        temp = createPolyLine(pairs[i][0],pairs[i][1],smoothness);
+                        temp = createPairs(temp);
+                        Array.prototype.push.apply(liniarPairs, temp);
+                    } else {
+                        liniarPairs.push([{"x":pairs[i][0].x,"y":pairs[i][0].y},pairs[i][1]]);
+                    }
+                }
+                console.log(liniarPairs);
+                //pairs = liniarPairs;       
 
                 for(var i=0,c=pairs.length;i<c;i+=1){
-                    var temp = calcDistance(pairs[i][0],pairs[i][1]);
+                    temp = calcDistance(pairs[i][0],pairs[i][1]);
                     sum+=temp;
                     part.push({"total":sum,"l":temp});                    
                 }
-                //console.log(part);
+                
                 //total length is equal to the last element total
                 
-                //calculate how much distance to draw per frame
-                var halfTotal = (part[part.length-1].total/finalStep)/2;
+                //split shape in two for this animation // refactor this into a new function
+                var halfTotal = (part[part.length-1].total)/2;
                 var percentile = 0,agregate = 0;
+
+                //add starting point
+                points[shapeIndex].push(pairs[pointPosition][0]);
 
                 //split shape up into two halfes of equal length and create points
                 for(var i=pointPosition,c=pairs.length;i<c;i+=1){
-                    if(agregate+part[i].l>halfTotal){
+                    
+                    if(agregate+part[i].l>=halfTotal){
+                        
                         percentile = (halfTotal-agregate)/part[i].l;
-                        var newPoint = {"x":pairs[i][1].x-pairs[i][0].x,"y":pairs[i][1].y-pairs[i][0].y};
-                        newPoint.x*=percentile;
-                        newPoint.y*=percentile;
-                        pairs[i][1].x+=newPoint.x;
-                        pairs[i][1].y+=newPoint.y;
+                        
+                        var newPoint;
+                        if(percentile>0.95){ //if the end is almost at the point (95%) then just use original points
+                            newPoint = pairs[i][1];
+                        } else {                            
+                            newPoint = splitLine(pairs[i][0],pairs[i][1],percentile);
+                        }
+                        
 
-                        points[shapeIndex].push(pairs[i][0]);
-                        points[shapeIndex].push(pairs[i][1]);
-
+                        points[shapeIndex].push(newPoint);
 
                         shapeIndex+=1;
                         points.push([]);
+                        if(percentile<=0.95){ //add newly added point to points array
+                            points[shapeIndex].push(newPoint);                            
+                        }
                         points[shapeIndex].push(pairs[i][1]);
+
+                        agregate = 0; halfTotal*=2;//make sure this if is not meet again
                     } else {
                         //if total distance is not reach add the point points and increase agregate size
                         agregate+=part[i].l
-                        points[shapeIndex].push(pairs[i][0]);
+                        points[shapeIndex].push(pairs[i][1]);
                     }
 
                     //if we reached the end of the pairs then go back to the begining
                     if(i==c-1){
-                        i=0;
+                        i=-1;
                         c=pointPosition;
+                        pointPosition = 0;//make sure it can only be set once
                     }
                 }
-
-                //calculate how much distance to draw per frame
-                var distance = 0
-                distance = part[part.length-1].total/finalStep;
-
-                //find defined point
                 
-                //split points up into new points and create an array of points to draw for each frame
+                //calculate how much distance to draw per frame
+                var distance = 0;
+                halfTotal = (part[part.length-1].total)/2;
+                distance = halfTotal/finalStep;
+
+                //split lines up into new points and create an array of points to draw for each frame
+                points[0] = splitShape(points[0],distance);
+                points[1] = splitShape(points[1],distance);
+
+                //controll animation flow
+                if(mode == "mirror"){
+                    points[1].reverse();
+                }
+                if(mode == "counter-clockwise"){
+                    points[0].reverse();
+                    points[1].reverse();
+                }
 
                 /*
                 http://stackoverflow.com/questions/878862/drawing-part-of-a-b%C3%A9zier-curve-by-reusing-a-basic-b%C3%A9zier-curve-function
@@ -332,24 +406,99 @@
                 http://pomax.github.io/bezierinfo/
                 http://stackoverflow.com/questions/15397596/find-all-the-points-of-a-cubic-bezier-curve-in-javascript
                 */
-
-
+                return points;
             }
 
-            function createPolyLine(){
+            function splitShape(points,distance){
+                var res=[], sub = [], len, agregate = 0;
+                distance = distance || 1;
+                while(points.length){
+                    for(var i=0,c=points.length-1;i<c;i++){
+                        len = calcDistance(points[i],points[i+1]);
+                        
+                        agregate+=len;
+                        sub.push(points[i]);
+
+                        //these are the last two points at a distance smaller or equal then needed per frame
+                        //meaning we need to finish the spliting and exit the loop
+                        if(agregate <= distance && points.length == 2){
+                            sub.push(points[1]);
+                            res.push(sub);
+                            sub=[];
+                            points=[];
+                            break;
+                        }
+                        
+
+                        if(agregate > distance){
+                            
+                            len=1-(agregate-distance)/len;
+                            var point = splitLine(points[i],points[i+1],len);
+                            
+                            sub.push(point);
+                            res.push(sub);
+                            sub=[];
+                            points.splice(0,i+1,point);
+                            i=c;
+                            agregate=0;
+
+                        }
+                    }                    
+                   
+                }                
+                return res;
+            }
+
+            function splitLine(p1,p2,percentile){
+                var newPoint = {"x":(p2.x-p1.x),"y":(p2.y-p1.y)};
+                            
+                newPoint.x*=percentile;
+                newPoint.y*=percentile;
+                
+                newPoint.x+=+p1.x;
+                newPoint.y+=+p1.y;
+
+                return newPoint;
+            }
+
+            function createPolyLine(p1,p2,segemnts){
                 // build poly line from curves
+                var res=[{"x":p1.x,"y":p1.y}],t=1/segemnts;
+                
+                for(var i=1;i<=segemnts;i+=1){
+                    res.push(calcBezierPoint(p1,p2,t*(i)));                    
+                }
+                return res;
             }
 
             function calcDistance(p1,p2){
-                if(p2.c2x) {
-                    //cubic curve length
-                } else if (p2.c1x) {
-                    //quadratic curve length
-                } else {
-                   return Math.sqrt(Math.pow(p1.x-p2.x,2)+Math.pow(p1.y-p2.y,2));
-                }
-                //remove me once implementing special cases abouve
                 return Math.sqrt(Math.pow(p1.x-p2.x,2)+Math.pow(p1.y-p2.y,2));
+            }
+
+            function calcBezierPoint(p1,p2,t){
+                var point,b1,b2,b3,b4,dt=1-t,x,y;
+
+                if(p2.c2x){//cubic curve
+                    b1=t*t*t;
+                    b2=3*t*t*dt;
+                    b3=3*t*dt*dt;
+                    b4=dt*dt*dt;
+
+                    x=p1.x*b1+p2.c1x*b2+p2.c2x*b2+p2.x*b4;
+                    y=p1.y*b1+p2.c1y*b2+p2.c2y*b2+p2.y*b4;
+                    point = {"x":x,"y":y};
+                } else if(p2.cx1){//quadratic curve                    
+                    b1=t*t;
+                    b2=2*t*dt;
+                    b3=dt*dt;
+
+                    x=p1.x*b1+p2.c1x*b2+p2.x*b3;
+                    y=p1.y*b1+p2.c1y*b2+p2.y*b3;
+                    point = {"x":x,"y":y};
+                } else {//not a curve but a line
+                    point = splitLine(p1,p2,t);
+                }
+                return point;
             }
 
             function transformPoint(p){
@@ -370,7 +519,7 @@
                 return p;
             }
 
-            function createPairs(points){
+            function createPairs(points,closePath){
                 var pairs=[];
                 var pair;
                 for(var i=1,c=points.length;i<c;i+=1){
@@ -381,7 +530,7 @@
                 }
 
                 //closing link
-                pairs.push([points[points.length-1],points[0]]);
+                closePath && pairs.push([points[points.length-1],points[0]]);
 
                 return pairs;
             }
@@ -460,20 +609,16 @@
                 ctx.restore();
             }
 
-            function init(){
-                
-                scale = document.getElementById("scale").value;
-                width = document.getElementById("logo").getAttribute("width");
-                height = document.getElementById("logo").getAttribute("height");
-                arrow = scaleAndTransform(arrow);
-
+            function init(){              
                 // Set framerate to 30 fps
-                setInterval(render, 1000/24);
+                handle = setInterval(render, 1000/24);
                 
                 document.getElementById("logo").onmouseover = function(e){
                     //console.log(e);
                     step=1;
-                    //
+                    if(!handle){
+                        handle = setInterval(render, 1000/24);
+                    }
                 };
             }
 
