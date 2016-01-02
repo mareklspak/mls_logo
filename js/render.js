@@ -5,7 +5,7 @@
             {"x":0,"y":-1},
             {"x":-0.866025403784,"y":-0.5},
             {"x":-0.866025403784,"y":0.5},
-            {"x":0,"y":1},
+            {"x":0,"y":1}
             ];
 
             var arrow = [
@@ -15,7 +15,7 @@
             {"x":-0.866025403784,"y":1},
             {"x":0,"y":1.5},
             {"x":0.866025403784,"y":1},
-            {"x":0.866025403784,"y":0.7},
+            {"x":0.866025403784,"y":0.7}
             ];
             /* old coordinates
 
@@ -85,24 +85,19 @@
             var step = 0;
             var smoothness = 10;
             var finalStep = 50;
+            var fadeSpeed = 60;
             var width, height;
-            
-            sexagon = createPairs(sexagon);
-            arrow = createPairs (arrow);
-            
-            
-            letterM = createPairs(letterM);
-            letterL = createPairs(letterL);
-            letterS = createPairs(letterS);
+            var shapes = [];
 
-            var aP1 = prepareAnimation(sexagon,"mirror",3);
-            var aP2 = prepareAnimation(arrow,"mirror",4);
-            var aP3 = prepareAnimation(letterM);
-            var aP4 = prepareAnimation(letterL);            
-            var aP5 = prepareAnimation(letterS);
+            var aP1 = prepareAnimation(createPairs(sexagon),"mirror",3);
+            var aP2 = prepareAnimation(createPairs (arrow),"mirror",4);
+            var aP3 = prepareAnimation(createPairs(letterM));
+            var aP4 = prepareAnimation(createPairs(letterL));            
+            var aP5 = prepareAnimation(createPairs(letterS));
 
             var handle;
             var mainColor = "rgba(0,11,90,1)";
+            var white = "rgba(255,255,255,1)";
          
             var origin = {"x":0,"y":0};
            
@@ -152,17 +147,53 @@
                 } else {
                     clearInterval(handle);
                     handle = null;
-
-                    ctx.save();
+                    
                     //ctx.clearRect(0, 0, width, height);
+                    if(!shapes.length){
+                        console.log("i get called only once");
+                        shapes.push([point,1]);
+                        shapes.push([scaleAndTransform(clone(arrow)),1,0]);
+                        shapes.push([scaleAndTransform(clone(sexagon)),1,0]);
+                        shapes.push([scaleAndTransform(clone(letterM)),0,1]);
+                        shapes.push([scaleAndTransform(clone(letterL)),0,1]);
+                        shapes.push([scaleAndTransform(clone(letterS)),0,1]);
 
-                    drawCircle(ctx,point.x,point.y,Math.round(2.*scale),0,5);
-                    drawShape(arrow,ctx);
-
+                        var cap = [{"x":0,"y":-1},{"x":0.866025403784,"y":-0.5},{"x":0,"y":0},{"x":-0.866025403784,"y":-0.5},{"x":0,"y":-1}];
+                        shapes.push([scaleAndTransform(clone(cap)),0,1]);
+                    }
+                    fade(ctx,shapes,0);
                 }
                 //render by frame instead of interval
                 //http://codetheory.in/controlling-the-frame-rate-with-requestanimationframe/
                 
+            }
+
+            function clone(obj){
+                return JSON.parse(JSON.stringify(obj));
+            }
+
+            function fade(ctx,shapes,s){
+                var fadeColor = "rgba(0,11,90,"+s/fadeSpeed+")", whiteFade = "rgba(255,255,255,"+s/fadeSpeed+")",point=shapes[0][0];
+                ctx.clearRect(0, 0, width, height);
+
+                drawCircle(ctx,point.x,point.y,Math.round(2.*scale),mainColor,1)
+                drawCircle(ctx,point.x,point.y,Math.round(2.*scale),fadeColor,5);
+                for(var i=1,c=shapes.length;i<c;i+=1){
+                    drawShape(shapes[i][0],ctx,1,mainColor);
+                    drawShape(shapes[i][0],ctx,(shapes[i][2])?1:0,(shapes[i][1])?fadeColor:whiteFade);
+                }
+                ctx.font = "30px Calibri";
+                ctx.fillStyle = fadeColor;
+                ctx.fillText("MLS",150,260);
+                ctx.fillText("INVEST",760,260);
+
+                if(s<fadeSpeed && !handle){
+
+                    requestAnimationFrame(function(){
+                        if(s>fadeSpeed*0.1){}
+                        fade(ctx,shapes,s+1)
+                    });
+                }
             }
 
             function parseSVG(s){
@@ -267,12 +298,14 @@
                 }
 
                 //connect back to beginning
-                if(points[0].c2x){
-                    ctx.bezierCurveTo(points[0].c1x, points[0].c1y, points[0].c2x, points[0].c2y, points[0].x, points[0].y);
-                } else if(points[0].c1x){
-                    ctx.quadraticCurveTo(points[0].c1x, points[0].c1y, points[0].x, points[0].y);
-                } else {
-                    ctx.lineTo(points[0].x,points[0].y)
+                if(points[0].x!=points[points.length-1].x && points[0].y!=points[points.length-1].y){
+                    if(points[0].c2x){
+                        ctx.bezierCurveTo(points[0].c1x, points[0].c1y, points[0].c2x, points[0].c2y, points[0].x, points[0].y);
+                    } else if(points[0].c1x){
+                        ctx.quadraticCurveTo(points[0].c1x, points[0].c1y, points[0].x, points[0].y);
+                    } else {
+                        ctx.lineTo(points[0].x,points[0].y)
+                    }
                 }
 
                 ctx.lineWidth = size || 1;
