@@ -158,8 +158,8 @@
                         shapes.push([scaleAndTransform(clone(letterL)),0,1]);
                         shapes.push([scaleAndTransform(clone(letterS)),0,1]);
 
-                        var cap = [{"x":0,"y":-1},{"x":0.866025403784,"y":-0.5},{"x":0,"y":0},{"x":-0.866025403784,"y":-0.5},{"x":0,"y":-1}];
-                        shapes.push([scaleAndTransform(clone(cap)),0,1]);
+                        //var cap = [{"x":0,"y":-1},{"x":0.866025403784,"y":-0.5},{"x":0,"y":0},{"x":-0.866025403784,"y":-0.5},{"x":0,"y":-1}];
+                        //shapes.push([scaleAndTransform(clone(cap)),0,1]);
                     }
                     fade(ctx,shapes,0);
                 }
